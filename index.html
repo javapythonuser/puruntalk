@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>랜덤채팅 앱</title>
+<link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+<style>
+  body {
+    background-color: #f0f2f5;
+  }
+  #headerTitle {
+    font-size: 24px; /* 폰트 크기 고정 */
+    font-weight: bold;
+    color: #2563EB; /* Tailwind CSS의 blue-500 색상 코드 */
+    text-align: center;
+    padding: 10px 0;
+  }
+  #messages {
+    background-color: white;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  }
+  input, button {
+    transition: all 0.2s ease-in-out;
+  }
+  button:hover {
+    transform: translateY(-2px);
+  }
+</style>
+</head>
+<body class="flex flex-col items-center h-screen">
+<div id="headerTitle">푸른톡</div>
+<div class="w-full max-w-md sm:max-w-xl md:max-w-2xl lg:max-w-3xl xl:max-w-4xl px-4">
+  <div id="nicknameScreen" class="p-4">
+    <input id="nickname" type="text" placeholder="닉네임을 입력하세요" class="w-full p-3 rounded-lg border-2 border-gray-200 focus:outline-none focus:border-blue-500">
+    <button id="startChat" class="mt-4 w-full bg-blue-500 text-white p-3 rounded-lg font-semibold hover:bg-blue-600 focus:outline-none">대화 시작하기</button>
+  </div>
+  <div id="chatScreen" class="hidden flex flex-col p-4 h-full">
+    <div id="messages" class="flex flex-col p-4 rounded-lg overflow-y-auto mb-4" style="height: 40vh;"></div>
+    <input id="messageInput" type="text" placeholder="메시지 입력..." class="p-3 rounded-lg border-2 border-gray-200 focus:outline-none focus:border-blue-500 mb-4">
+    <button id="send" class="bg-blue-500 text-white p-3 rounded-lg font-semibold hover:bg-blue-600 focus:outline-none">보내기</button>
+    <button id="findNew" class="mt-2 bg-green-500 text-white p-3 rounded-lg font-semibold hover:bg-green-600 focus:outline-none">다른 사람과 대화하기</button>
+  </div>
+</div>
+<script src="/socket.io/socket.io.js"></script>
+<script>
+  const socket = io();
+  const nicknameScreen = document.getElementById('nicknameScreen');
+  const chatScreen = document.getElementById('chatScreen');
+  const startChat = document.getElementById('startChat');
+  const nicknameInput = document.getElementById('nickname');
+  const messageInput = document.getElementById('messageInput');
+  const sendButton = document.getElementById('send');
+  const messagesDiv = document.getElementById('messages');
+  const findNewButton = document.getElementById('findNew');
+
+  startChat.addEventListener('click', () => {
+    const nickname = nicknameInput.value.trim();
+    if (nickname) {
+      socket.emit('setNickname', nickname);
+      nicknameScreen.classList.add('hidden');
+      chatScreen.classList.remove('hidden');
+      messagesDiv.innerHTML = `<div class="text-gray-600">🔍 새로운 대화 상대를 찾는 중...</div>`;
+    }
+  });
+
+  socket.on('chatStart', (data) => {
+    messagesDiv.innerHTML = `<div class="text-gray-600">🔗 ${data.with}님과 연결되었습니다. 대화를 시작하세요!</div>`;
+    scrollToBottom();
+  });
+
+  socket.on('message', (data) => {
+    messagesDiv.innerHTML += `<div class="${data.from === '나' ? 'text-blue-500' : 'text-gray-800'}"><strong>${data.from}:</strong> ${data.msg}</div>`;
+    scrollToBottom();
+  });
+
+  socket.on('partnerDisconnected', () => {
+    messagesDiv.innerHTML += `<div class="text-red-500">⚠️ 상대방이 대화에서 나갔습니다.</div>`;
+    scrollToBottom();
+  });
+
+  function sanitizeInput(text) {
+    return text.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  }
+
+  // 메시지 전송 함수 내에서 sanitizeInput 함수 사용
+  sendButton.addEventListener('click', () => {
+    let message = messageInput.value.trim();
+    if (message) {
+      message = sanitizeInput(message); // HTML 태그 제거
+      socket.emit('message', message);
+      messagesDiv.innerHTML += `<div class="text-blue-500"><strong>나:</strong> ${message}</div>`;
+      messageInput.value = '';
+      scrollToBottom();
+    }
+  });
+
+  findNewButton.addEventListener('click', () => {
+    socket.emit('findNew');
+    messagesDiv.innerHTML = `<div class="text-gray-600">🔍 새로운 대화 상대를 찾는 중...</div>`;
+    scrollToBottom();
+  });
+
+  function scrollToBottom() {
+    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+  }
+</script>
+</body>
+</html>
