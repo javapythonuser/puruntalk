@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>관리자페이지</title>
+<link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+<style>
+  .card {
+    background-color: #fff;
+    border-radius: 0.5rem;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+  }
+  .card-header {
+    padding: 0.5rem 1rem;
+    border-bottom: 1px solid #e2e8f0;
+    background-color: #f7fafc;
+  }
+  .card-body {
+    padding: 1rem;
+  }
+</style>
+</head>
+<body class="bg-gray-100 p-5">
+  <div class="max-w-4xl mx-auto">
+    <div class="text-center mb-8">
+      <h1 class="text-3xl font-bold text-gray-700">관리자페이지</h1>
+      <p class="text-gray-600">유저접속현황</p>
+    </div>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div class="card">
+        <div class="card-header">
+          <h2 class="font-semibold text-gray-800">대기 중인 사용자</h2>
+        </div>
+        <div class="card-body">
+          <p id="waitingCount" class="text-lg"></p>
+          <ul id="waitingUsersList" class="list-disc pl-5"></ul>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <h2 class="font-semibold text-gray-800">대화 중인 사용자 쌍</h2>
+        </div>
+        <div class="card-body">
+          <p id="chattingCount" class="text-lg"></p>
+          <ul id="chattingPairsList" class="list-disc pl-5"></ul>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const adminSocket = io('/admin');
+    const waitingUsersList = document.getElementById('waitingUsersList');
+    const chattingPairsList = document.getElementById('chattingPairsList');
+    const waitingCount = document.getElementById('waitingCount');
+    const chattingCount = document.getElementById('chattingCount');
+  
+    adminSocket.emit('requestUsersInfo');
+  
+    adminSocket.on('usersInfo', (data) => {
+      waitingCount.textContent = `대기 중인 사용자: ${data.waitingCount}명`;
+      chattingCount.textContent = `대화 중인 사용자 쌍: ${data.chattingCount}쌍`;
+  
+      waitingUsersList.innerHTML = data.waitingUserNicknames.map(user => `<li>${user}</li>`).join('');
+      chattingPairsList.innerHTML = data.chattingPairs.map(pair => `<li>${pair.user1} ↔ ${pair.user2}</li>`).join('');
+    });
+  </script>
+</body>
+</html>
